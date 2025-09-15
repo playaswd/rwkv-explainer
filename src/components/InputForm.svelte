@@ -1,0 +1,392 @@
+<script lang="ts">
+	// Import Flowbite Svelte components and icons
+	import { Dropdown, DropdownItem, ButtonGroup } from 'flowbite-svelte';
+	import Temperature from './Temperature.svelte';
+	import { ChevronDownOutline } from 'flowbite-svelte-icons';
+
+	// Import global state management variables and methods
+	import {
+		inputText,
+		isModelRunning,
+		predictedToken,
+		inputTextExample,
+		isFetchingModel,
+		expandedBlock,
+		selectedExampleIdx,
+		isLoaded,
+		isOnAnimation,
+		isMobile,
+		weightPopover,
+		sampling,
+		timemixHeadIdx,
+		blockIdx,
+		temperature,
+		tokenIds,
+		modelMeta
+	} from '~/store';
+	import LoadingDots from './common/LoadingDots.svelte';
+	import classNames from 'classnames';
+	import Sampling from './Sampling.svelte';
+
+	// References for input box and prediction box
+	let inputRef: HTMLDivElement;
+	let predictRef: HTMLDivElement;
+
+	// Whether to use custom input
+	let useCustomInput = false;
+
+	// Reactive variables: input text and predicted token
+	$: inputTextTemp = $inputText || '';
+	$: predictedTokenTemp = $predictedToken?.token || '';
+
+	// Input word limit
+	const wordLimit = 12;
+	$: exceedLimit = inputTextTemp.split(' ').length >= wordLimit;
+
+	// Handler when input box is focused
+	const onFocusInput = (e) => {
+		let formattedString = (inputTextTemp + predictedTokenTemp).replace(/[\s\n]+/g, ' ');
+		inputTextTemp = formattedString;
+		// Clear predicted token
+		predictedTokenTemp = '';
+		// Set input box content
+		inputRef.innerText = inputTextTemp;
+	};
+
+	// Handler for input box content change
+	const onInput = (e) => {
+		inputTextTemp = inputRef.innerText;
+		// console.log('inputTextTemp:', inputTextTemp);
+	};
+
+	// Handler for submitting input
+	const handleSubmit = (e) => {
+		onFocusInput();
+		inputText.set(inputTextTemp);
+		// Event tracking, record parameters for generating token
+		// window.dataLayer.push({
+		// 	event: 'generate-next-token',
+		// 	tmix_head_num: $timemixHeadIdx,
+		// 	rwkv_block_num: $blockIdx,
+		// 	sampling_type: $sampling.type,
+		// 	sampling_value: $sampling.value,
+		// 	temperature_value: $temperature,
+		// 	current_token_length: $tokenIds.length,
+		// 	input_word_count: inputTextTemp
+		// 		.trim()
+		// 		.split(/\s+/)
+		// 		.filter((word) => word.length > 0).length,
+		// 	use_custom_input: useCustomInput
+		// });
+	};
+
+	// Handler for keydown event in input box
+	const handleKeyDown = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			if (disabled || exceedLimit) return;
+			handleSubmit(e);
+			return;
+		}
+		useCustomInput = true;
+	};
+
+	// Logic for example selection dropdown
+	let dropdownOpen = false;
+	const onSelectExample = (d, i) => {
+		dropdownOpen = false;
+		inputTextTemp = d;
+		inputRef.innerText = inputTextTemp;
+		predictedTokenTemp = '';
+		inputText.update((prev) => {
+			if (prev === d.trim()) {
+				return d + ' ';
+			}
+			return d.trim();
+		});
+		selectedExampleIdx.set(i);
+		useCustomInput = false;
+	};
+
+	// Move cursor to the end of the input box
+	const moveCursorToEnd = (element) => {
+		const range = document.createRange();
+		const sel = window.getSelection();
+		range.selectNodeContents(element);
+		range.collapse(false);
+		sel.removeAllRanges();
+		sel.addRange(range);
+		element.focus();
+	};
+
+	// Reactive variables: loading and disabled state
+	$: isLoading = $isFetchingModel || $isModelRunning;
+	$: disabled =
+		$isOnAnimation ||
+		$isFetchingModel ||
+		$isModelRunning ||
+		$expandedBlock.id !== null ||
+		!!$weightPopover;
+	$: selectDisabled =
+		$isOnAnimation || $isModelRunning || $expandedBlock.id !== null || !!$weightPopover;
+	$: parameterDisabled = $isOnAnimation || !!$weightPopover;
+</script>
+
+<!-- Main container for input area -->
+<div class="input-area" data-click="input-area">
+	<form class="input-form" data-click="input-form">
+		<!-- Example selection and input box button group -->
+		<ButtonGroup class="input-btn-group" size="sm">
+			<!-- Example dropdown button -->
+			<button
+				data-click="dropdown-btn"
+				type="button"
+				disabled={selectDisabled}
+				class:selectDisabled
+				class="select-button inline-flex shrink-0 items-center justify-center border border-s-0 border-gray-200 bg-white px-3 py-2 text-center text-xs font-medium text-gray-900 first:rounded-s-lg first:border-s last:rounded-e-lg"
+			>
+				Examples<ChevronDownOutline class="pointer-events-none h-4 w-4 text-gray-500" />
+			</button>
+			<!-- Example dropdown menu -->
+			<Dropdown placement="bottom-start" bind:open={dropdownOpen} class="example-dropdown">
+				{#each inputTextExample as text, index}
+					<DropdownItem
+						data-click={`dropdown-item-${index}`}
+						class={$selectedExampleIdx === index && 'active'}
+						on:click={() => {
+							onSelectExample(text, index);
+						}}>{text}</DropdownItem
+					>
+				{/each}
+			</Dropdown>
+
+			<!-- Input text area -->
+			<div
+				data-click="text-input"
+				class="input-container"
+				class:disabled
+				role="none"
+				on:keydown={(e) => {
+					e.stopPropagation();
+					inputRef.focus();
+				}}
+				on:click={(e) => {
+					e.stopPropagation();
+					inputRef.focus();
+				}}
+			>
+				<div class={`editable ${!$isModelRunning ? 'w-full' : ''}`}>
+					<!-- Editable input box -->
+					<div
+						bind:this={inputRef}
+						contenteditable={!disabled}
+						class="text-box"
+						placeholder="Test your own input text"
+						on:focus={onFocusInput}
+						on:input={onInput}
+						on:keydown={handleKeyDown}
+						on:click={(e) => {
+							e.stopPropagation();
+						}}
+						role="input"
+					>
+						{inputTextTemp}
+					</div>
+					<!-- Predicted token display -->
+					<div
+						bind:this={predictRef}
+						class="predicted"
+						role="none"
+						on:click={(e) => {
+							e.stopPropagation();
+							onFocusInput(e);
+							inputRef.focus();
+							moveCursorToEnd(inputRef);
+						}}
+					>
+						<span>{predictedTokenTemp}</span>
+					</div>
+				</div>
+				<!-- Loading animation -->
+				{#if $isModelRunning}
+					<div class="loading"><LoadingDots /></div>
+				{/if}
+				<!-- Helper tip information -->
+				{#if $isMobile}
+					<span class="helper-text"
+						>Try the examples. Please access on a desktop computer to use RWKV-4 model.</span
+					>
+				{:else if $isLoaded && $isFetchingModel}
+					<span class="helper-text">
+						<!-- Try the examples while RWKV-4(small) model is being downloaded ({$modelMeta.chunkNum * 50}MB) -->
+						Try the examples while RWKV-4(small) model is being downloaded (660MB)
+					</span>
+				{:else if exceedLimit}
+					<span class="helper-text">You can enter up to {wordLimit} words.</span>
+				{/if}
+			</div>
+		</ButtonGroup>
+		<!-- Generate button -->
+		<button
+			data-click="generate-btn"
+			disabled={disabled || exceedLimit || exceedLimit}
+			class={classNames('generate-button rounded-lg text-center text-sm shadow-sm', {
+				disabled: disabled || exceedLimit,
+				active: !(disabled || exceedLimit)
+			})}
+			type="submit"
+			on:click={handleSubmit}
+		>
+			Generate
+		</button>
+	</form>
+	<!-- Parameter adjustment area: temperature and sampling method -->
+	<div class="parameters" data-click="input-parameters">
+		<Temperature disabled={parameterDisabled} />
+		<Sampling disabled={parameterDisabled} />
+	</div>
+</div>
+
+<style lang="scss">
+	// Styles for parameter adjustment area
+	.parameters {
+		display: flex;
+		gap: 1rem;
+	}
+	// Main styles for input area
+	.input-area {
+		width: 100%;
+		flex-shrink: 0;
+		display: flex;
+		gap: 1rem;
+		padding-left: 1rem;
+		padding-right: 1.25rem;
+
+		.input-form {
+			width: 100%;
+			flex: 1 0 0;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+
+			:global(.input-btn-group) {
+				flex: 1 0 0;
+				display: flex;
+			}
+		}
+	}
+	// Styles for input box container
+	.input-container {
+		position: relative;
+		display: flex;
+		flex: 1 0 0;
+		align-items: center;
+
+		border: 1px solid theme('colors.gray.300');
+		color: theme('colors.gray.900');
+		border-left: none;
+		border-start-end-radius: 0.5rem;
+		border-end-end-radius: 0.5rem;
+		font-size: 0.9rem;
+		line-height: 1rem;
+		padding: 0.5rem;
+		white-space: pre-wrap;
+		gap: 0.3rem;
+
+		width: 10px; // Keep input box width
+
+		.editable {
+			overflow-y: hidden;
+			justify-content: end; // Right align to show the last word
+
+			display: flex;
+			align-items: center;
+			overflow-x: hidden;
+			white-space: nowrap;
+
+			.text-box {
+				white-space: nowrap;
+				br {
+					display: none;
+				}
+
+				&:focus {
+					outline: none;
+				}
+			}
+			.predicted {
+				flex: 1 0 0;
+				color: var(--predicted-color);
+				font-weight: 600;
+				span {
+					white-space: pre;
+				}
+			}
+		}
+
+		&.disabled {
+			cursor: not-allowed;
+		}
+
+		.loading {
+			flex-shrink: 0;
+		}
+	}
+
+	// Styles for example selection button
+	.select-button {
+		flex-shrink: 0;
+		font-size: 0.8rem;
+		border: 1px solid theme('colors.gray.300');
+		color: theme('colors.gray.900');
+		&:hover {
+			background-color: theme('colors.gray.100');
+		}
+		&:focus {
+			outline: none;
+		}
+		&.disabled {
+			cursor: not-allowed;
+		}
+	}
+	:global(.example-dropdown) {
+		:global(.active) {
+			background-color: theme('colors.gray.100') !important;
+		}
+	}
+	// Styles for helper tip text
+	.helper-text {
+		position: absolute;
+		bottom: 0;
+		right: 0;
+		padding: 0.3rem 0;
+		transform: translate(0, 100%);
+		color: theme('colors.gray.400');
+		font-size: 0.9rem;
+	}
+	// Styles for generate button
+	:global(.generate-button) {
+		padding: 0.4rem 0.8rem;
+		border: 1px solid theme('colors.gray.300');
+		color: theme('colors.gray.900');
+		transition: all 0.2s;
+		flex-shrink: 0;
+	}
+	:global(.generate-button.active) {
+		&:hover {
+			border: 1px solid var(--predicted-color);
+			color: var(--predicted-color);
+		}
+	}
+	:global(.generate-button.disabled) {
+		opacity: 1;
+		background-color: theme('colors.gray.100');
+		color: theme('colors.gray.400');
+		cursor: not-allowed;
+	}
+
+	:global(.generate-button):focus {
+		border: 1px solid var(--predicted-color);
+		color: var(--predicted-color);
+	}
+</style>

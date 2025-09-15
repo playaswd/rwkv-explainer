@@ -1,0 +1,26 @@
+svg {
+	overflow: visible;
+}
+
+[role='button'],
+button {
+	svg:focus {
+		outline: none;
+	}
+}
+
+*:focus {
+	outline: none;
+}
+
+// @media (min-width: 1920px) {
+// 	:root {
+// 		font-size: 18px;
+// 	}
+// }
+
+@media (min-width: 2560px) {
+	:root {
+		font-size: 18px;
+	}
+}

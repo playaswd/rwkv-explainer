@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>RWKV Explainer: RWKV LLM Model Visually Explained</title>
+
+		<!-- Primary Meta Tags -->
+		<meta name="title" content="RWKV Explainer: RWKV LLM Model Visually Explained" />
+		<meta
+			name="description"
+			content="An interactive visualization tool showing you how rnn models work in large language models (LLM) like RWKV."
+		/>
+
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://playaswd.github.io/rwkv-explainer/" />
+		<meta
+			property="og:title"
+			content="RWKV Explainer: RWKV LLM Model Visually Explained"
+		/>
+		<meta
+			property="og:description"
+			content="An interactive visualization tool showing you how rnn models work in large language models (LLM) like RWKV."
+		/>
+		<!-- <meta
+			property="og:image"
+			content="https://playaswd.github.io/rwkv-explainer/preview/summary.png"
+		/> -->
+
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content="https://playaswd.github.io/rwkv-explainer/" />
+		<meta
+			property="twitter:title"
+			content="RWKV Explainer: RWKV LLM Model Visually Explained"
+		/>
+		<meta
+			property="twitter:description"
+			content="An interactive visualization tool showing you how rnn models work in large language models (LLM) like RWKV."
+		/>
+		<!-- <meta
+			property="twitter:image"
+			content="https://playaswd.github.io/rwkv-explainer/preview/summary.png"
+		/> -->
+
+		<script src="https://cdn.jsdelivr.net/pyodide/v0.21.0a2/full/pyodide.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js"></script>
+
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
